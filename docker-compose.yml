@@ -1,0 +1,44 @@
+version: '3'
+services:
+  db_migrate:
+    image: linotp
+    container_name: db_migrate
+    restart: "no"
+    depends_on:
+      - postgres
+    volumes:
+      - ./linotp/linotp.ini:/etc/linotp2/linotp.ini
+      - ./linotp/encKey:/etc/linotp2/encKey
+      - ./linotp/public.pem:/etc/linotp2/public.pem
+      - ./linotp/private.pem:/etc/linotp2/private.pem
+    entrypoint: ""
+    command: paster setup-app /etc/linotp2/linotp.ini
+
+  linotp:
+    image: linotp
+    container_name: linotp
+    restart: "always"
+    ports:
+      - '8080:80'
+      # - '5001:5001'
+    depends_on:
+      - db_migrate
+    volumes:
+      - ./linotp/linotp.ini:/etc/linotp2/linotp.ini
+      - ./linotp/encKey:/etc/linotp2/encKey
+      - ./linotp/linotp2.conf:/etc/httpd/conf.d/linotp2.conf
+      - ./linotp/public.pem:/etc/linotp2/public.pem
+      - ./linotp/private.pem:/etc/linotp2/private.pem
+      - ./linotp/admins:/etc/linotp2/admins
+    # command: paster serve /etc/linotp2/linotp.ini
+
+  postgres:
+    restart: always
+    image: postgres:10.4-alpine
+    container_name: postgres
+    # volumes:
+    #  - ./pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=linotp
+      - POSTGRES_PASSWORD=linotp
+      - POSTGRES_DB=linotp
