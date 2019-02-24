@@ -4,6 +4,7 @@ services:
     image: linotp
     container_name: db_migrate
     restart: "no"
+    entrypoint: ""
     depends_on:
       - postgres
     volumes:
@@ -11,18 +12,21 @@ services:
       - ./linotp/encKey:/etc/linotp2/encKey
       - ./linotp/public.pem:/etc/linotp2/public.pem
       - ./linotp/private.pem:/etc/linotp2/private.pem
-    entrypoint: ""
     command: paster setup-app /etc/linotp2/linotp.ini
 
   linotp:
     image: linotp
     container_name: linotp
     restart: "always"
+    # entrypoint: ""
     ports:
-      - '8080:80'
-      # - '5001:5001'
+      # - '8080:80'
+      - '5001:5001'
     depends_on:
       - db_migrate
+    labels:
+      - "traefik.port=5001"
+      - "traefik.frontend.rule=PathPrefixStrip:/"
     volumes:
       - ./linotp/linotp.ini:/etc/linotp2/linotp.ini
       - ./linotp/encKey:/etc/linotp2/encKey
@@ -42,3 +46,15 @@ services:
       - POSTGRES_USER=linotp
       - POSTGRES_PASSWORD=linotp
       - POSTGRES_DB=linotp
+
+  traefik:
+    image: traefik:v1.7.9  # The official Traefik docker image
+    container_name: traefik
+    command: --api --docker  # Enables the web UI and tells Traefik to listen to docker
+    depends_on:
+      - linotp
+    ports:
+      - "80:80"      # The HTTP port
+      - "8080:8080"  # The Web UI (enabled by --api)
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock  # So that Traefik can listen to the Docker events
